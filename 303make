@@ -70,10 +70,6 @@ def display_dep(tree):
         print()
 
 def print_lines(files, tree, rules, main):
-    print(files)
-    print(tree)
-    print(rules)
-    print(main)
     for f in files:
         ok = False
         for branch in tree:
