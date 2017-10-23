@@ -42,7 +42,7 @@ def display_matrix(names, rules):
         print()
     print()
 
-def recur(liste, current, first = False):
+def recur(liste, current, rules, first = False):
     rule = current[len(current) - 1]
     value = rules.get(rule)
     if not first:
@@ -51,23 +51,24 @@ def recur(liste, current, first = False):
         for dep in value[0]:
             c = current.copy()
             c.append(dep)
-            recur(liste, c)
+            recur(liste, c, rules, False)
     pass
 
-def get_tree(main):
+def get_tree(main, rules):
     tree = list()
     if main is not None:
         current = list()
         current.append(main)
-        recur(tree, current, True)
+        recur(tree, current, rules)
     return sorted(tree)
 
 def display_dep(tree):
     for branch in tree:
-        for i in range(0, len(branch)):
-            print(branch[i], end="")
-            print(" -> " if i != len(branch) - 1 else "", end="")
-        print()
+        if len(branch) > 1:
+            for i in range(0, len(branch)):
+                print(branch[i], end="")
+                print(" -> " if i != len(branch) - 1 else "", end="")
+            print()
 
 def print_lines(files, tree, rules, main):
     lines = list()
@@ -90,7 +91,7 @@ def print_lines(files, tree, rules, main):
     for i in lines:
         print(i)
 
-if __name__ == "__main__":
+def main():
     files = check_param()
     fd = open(sys.argv[1])
     rules = dict()
@@ -119,9 +120,11 @@ if __name__ == "__main__":
     names = get_names(rules)
     if files is None:
         display_matrix(names, rules)
-    tree = get_tree(main)
+    tree = get_tree(main, rules)
     if files is None:
         display_dep(tree)
     else:
         print_lines(files, tree, rules, main)
-    exit(0)
+
+if __name__ == "__main__":
+    main()
