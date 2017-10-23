@@ -2,120 +2,125 @@
 import sys
 import os
 
-make_vars = dict()
-make_rules = dict()
-main_rule = None
-current_rule = None
-
-def recur(lst, current, first=False):
-    rul = current[len(current) - 1]
-    val = make_rules.get(rul)
-    if not first:
-        lst.append(list(reversed(current.copy())))
-    if val is not None:
-        for de in val[0]:
-            cu = current.copy()
-            cu.append(de)
-            recur(lst, cu)
-    pass
-
-
-def strip(string):
-    while len(string) > 0 and (string[0] == " " or string[0] == "\t"):
-        string = string.strip(" ").strip("\t")
-    while len(string) > 0 and (string[len(string) - 1] == " " or string[len(string) - 1] == "\t"):
-        string = string.strip(" ").strip("\t")
+def epure(string):
+    while (len(string) > 0 and (string[0] == " " or string[0] == "\t" or string[len(string) - 1] == " " or string[len(string) - 1] == "\t" or string[len(string) - 1] == "\n")):
+        string = string.strip(" ").strip("\t").strip("\n")
     return string
 
-
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
+def check_param():
+    if len(sys.argv) < 2 or not os.path.exists(sys.argv[1]):
         print("Usage : " + sys.argv[0] + " Makefile [file]")
         exit(84)
-
-    modified = None
+    files = None
     if len(sys.argv) > 2:
-        modified = list()
+        files = list()
         for i in range(2, len(sys.argv)):
-            modified.append(sys.argv[i])
+            files.append(sys.argv[i])
+    return files
 
-    if not os.path.exists(sys.argv[1]):
-        exit(84)
-    file = open(sys.argv[1])
-    for line in file:
-        line = line.strip("\n").split("#")[0]
-        if line == "":
-            continue
-        i2 = line.find(":")
-        if i2 != -1:
-            rule = strip(line[:i2])
-            dep = strip(line[i2 + 1:])
-            dep = dep.split(" ")
-            make_rules[rule] = (dep, list())
-            current_rule = make_rules[rule]
-            if main_rule is None:
-                main_rule = rule
-        elif len(line) > 0:
-            cmd = strip(line)
-            split = cmd.split(" ")
-            cmd = " ".join(split)
-            if current_rule is None:
-                exit(84)
-            current_rule[1].append(cmd)
-        else:
-            exit(84)
-    file.close()
-
+def get_names(rules):
     names = set()
-    for r, c in make_rules.items():
-        names.add(r)
-        for d in c[0]:
-            names.add(d)
-    names = sorted(names)
+    for i, j in rules.items():
+        names.add(i)
+        for k in j[0]:
+            names.add(k)
+    return sorted(names)
 
-    if modified is None:
-        for name in names:
-            values = []
-            v = make_rules.get(name)
-            for name2 in names:
-                if v is not None and name2 in v[0]:
-                    values.append(1)
-                else:
-                    values.append(0)
-            print("[", end="")
-            for i in range(0, len(values)):
-                print(values[i], end="")
-                print(" " if i != len(values) - 1 else "]", end="")
-            print()
+def display_matrix(names, rules):
+    for name in names:
+        values = []
+        v = rules.get(name)
+        for n in names:
+            if v is not None and n in v[0]:
+                values.append(1)
+            else:
+                values.append(0)
+        print("[", end="")
+        for i in range(0, len(values)):
+            print(values[i], end="")
+            print(" " if i != len(values) - 1 else "]", end="")
+        print()
+    print()
+
+def recur(liste, current, first = False):
+    rule = current[len(current) - 1]
+    value = rules.get(rule)
+    if not first:
+        liste.append(list(reversed(current.copy())))
+    if value is not None:
+        for dep in value[0]:
+            c = current.copy()
+            c.append(dep)
+            recur(liste, c)
+    pass
+
+def get_tree(main):
+    tree = list()
+    if main is not None:
+        current = list()
+        current.append(main)
+        recur(tree, current, True)
+    return sorted(tree)
+
+def display_dep(tree):
+    for branch in tree:
+        for i in range(0, len(branch)):
+            print(branch[i], end="")
+            print(" -> " if i != len(branch) - 1 else "", end="")
         print()
 
-    tree = list()
-    if main_rule is not None:
-        cur = list()
-        cur.append(main_rule)
-        recur(tree, cur, True)
-    tree = sorted(tree)
-
-    if modified is None:
+def print_lines(files, tree, rules, main):
+    print(files)
+    print(tree)
+    print(rules)
+    print(main)
+    for f in files:
+        ok = False
         for branch in tree:
-            for i in range(0, len(branch)):
-                print(branch[i], end="")
-                print(" -> " if i != len(branch) - 1 else "", end="")
-            print()
-
-    if modified is not None:
-        for m in modified:
-            ok = False
-            for branch in tree:
-                if branch[0] == m:
-                    for i in range(1, len(branch)):
-                        r = make_rules.get(branch[i])
-                        if not r:
-                            exit(84)
-                        for r2 in r[1]:
+            if branch[0] == f:
+                for i in range(1, len(branch)):
+                    r = rules.get(branch[i])
+                    if not r:
+                        exit(84)
+                    for r2 in r[1]:
+                        if len(r2) > 0:
                             print(r2)
-                    ok = True
-            if not ok and m != main_rule:
-                exit(84)
+                ok = True
+        if not ok and f != main:
+            exit(84)
 
+if __name__ == "__main__":
+    files = check_param()
+    fd = open(sys.argv[1])
+    rules = dict()
+    main = None
+    current = None
+    for line in fd:
+        line.strip("\n").split("#")[0]
+        if line == "":
+            continue
+        delimiter = line.find(":")
+        if delimiter >= 0:
+            rule = epure(line[:delimiter])
+            dep = epure(line[delimiter + 1:]).split(" ")
+            rules[rule] = (dep, list())
+            current = rules[rule]
+            if main is None:
+                main = rule
+        elif len(line) > 0:
+            tab = " ".join(epure(line).split(" "))
+            if current is None:
+                exit(84)
+            current[1].append(tab)
+        else:
+            exit(84)
+    fd.close()
+    names = get_names(rules)
+    if files is None:
+        display_matrix(names, rules)
+    tree = get_tree(main)
+    if files is None:
+        display_dep(tree)
+    else:
+        print_lines(files, tree, rules, main)
     exit(0)
